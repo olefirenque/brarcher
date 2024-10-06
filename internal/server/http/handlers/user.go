@@ -1,4 +1,4 @@
-package httpapp
+package handlers
 
 import (
 	"brarcher/internal/postgres"
@@ -15,7 +15,7 @@ func NewUserServer(repo postgres.RepositoryProvider) *UserServer {
 	return &UserServer{repo: repo}
 }
 
-func (us *UserServer) registerUser(w http.ResponseWriter, r *http.Request) {
+func (us *UserServer) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	if !hasContentType(r, "application/json") {
 		w.WriteHeader(http.StatusUnsupportedMediaType)
 		return
@@ -41,7 +41,7 @@ type registerUserRequest struct {
 	Username string `json:"username"`
 }
 
-func (us *UserServer) getUser(w http.ResponseWriter, r *http.Request) {
+func (us *UserServer) GetUser(w http.ResponseWriter, r *http.Request) {
 	if !hasContentType(r, "application/json") {
 		w.WriteHeader(http.StatusUnsupportedMediaType)
 		return

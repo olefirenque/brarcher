@@ -1,12 +1,14 @@
 package main
 
 import (
-	"brarcher/internal/meta"
+	"brarcher/internal/config"
 	"brarcher/internal/postgres"
 	httpapp "brarcher/internal/server/http"
-	"brarcher/internal/server/ws"
+	"brarcher/internal/server/http/handlers"
+	"brarcher/internal/server/http/ws"
 	"brarcher/internal/session"
 	"context"
+	"fmt"
 	"github.com/redis/go-redis/v9"
 	"log"
 	"net/http"
@@ -15,34 +17,32 @@ import (
 func main() {
 	ctx := context.Background()
 
-	repo, err := postgres.Connect(ctx, "postgresql://postgres:password@localhost:5431/db")
+	conf := config.New()
+
+	repo, err := postgres.Connect(ctx, conf.PostgresDSN)
 	if err != nil {
 		log.Fatalf("failed to connect to db: %s", err)
 	}
 
-	redisClient := redis.NewClient(&redis.Options{
-		Addr: "localhost:6381",
-	})
+	redisClient := redis.NewClient(&redis.Options{Addr: conf.RedisAddr})
 
-	backendMeta, err := meta.NewMeta(ctx, redisClient)
-	if err != nil {
-		log.Fatal(err)
-	}
+	sessionStore := session.NewSessionStore(redisClient, fmt.Sprintf("%s:%d", conf.HostName, conf.HTTPPort))
 
-	sessionStore := session.NewSessionStore(redisClient)
+	userServer := handlers.NewUserServer(repo)
 
-	userServer := httpapp.NewUserServer(repo)
+	redirectServer := handlers.NewRedirectServer(sessionStore)
+
 	messageWSServer := ws.NewMessageWSServer(ws.MessageWSServerDeps{
 		Repo:         repo,
 		SessionStore: sessionStore,
-		Meta:         backendMeta,
 	})
 
 	mux := http.NewServeMux()
 	if err := httpapp.Listen(mux, httpapp.Servers{
 		UserServer:      userServer,
 		MessageWSServer: messageWSServer,
-	}); err != nil {
+		RedirectServer:  redirectServer,
+	}, conf.HTTPPort); err != nil {
 		log.Fatalf("ListenAndServe: %s", err)
 	}
 }

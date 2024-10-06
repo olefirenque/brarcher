@@ -1,4 +1,4 @@
-package httpapp
+package handlers
 
 import (
 	"mime"
