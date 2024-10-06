@@ -12,17 +12,16 @@ import (
 
 func (ms *MessageWSServer) redirectToTargetSession(ctx context.Context, toID int64, msg string) {
 	if ch, ok := ms.sessionStore.GetSessionChan(toID); ok {
-		fmt.Println("got message for current backend")
-
 		select {
 		case <-ctx.Done():
 		case ch <- msg:
 		}
+
+		return
 	}
 
 	host, ok := ms.sessionStore.ResolveBackend(ctx, toID)
 	if !ok {
-		fmt.Printf("failed to list user %d session\n", toID)
 		// user isn't connected currently.
 		return
 	}
