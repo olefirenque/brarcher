@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"brarcher/internal/logger"
 	"brarcher/internal/postgres"
 )
 
@@ -34,14 +35,14 @@ func (ms *MessageWSServer) validateUserID(w http.ResponseWriter, r *http.Request
 	_, err := ms.repo.ROUsers().GetUser(r.Context(), userID)
 	if errors.Is(err, postgres.ErrNotFound) {
 		msg := fmt.Sprintf("user %d doesn't exist", userID)
-		fmt.Println(msg)
+		logger.Error(msg)
 
 		w.WriteHeader(http.StatusBadRequest)
 		_, _ = w.Write([]byte(msg))
 		return false
 	} else if err != nil {
 		msg := fmt.Sprintf("failed to validate userID %d: %s", userID, err)
-		fmt.Println(msg)
+		logger.Error(msg)
 
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = w.Write([]byte(msg))

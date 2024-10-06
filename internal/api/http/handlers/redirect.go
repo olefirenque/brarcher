@@ -3,6 +3,8 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+
+	"brarcher/internal/logger"
 )
 
 type sessionStore interface {
@@ -38,4 +40,6 @@ func (rs *RedirectServer) RedirectMessage(w http.ResponseWriter, r *http.Request
 	if ch, ok := rs.sessionStore.GetSessionChan(msg.ToUserID); ok {
 		ch <- msg.Message
 	}
+
+	logger.Info("successfully redirected message from another host")
 }

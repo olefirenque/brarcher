@@ -1,17 +1,19 @@
 package main
 
 import (
-	"brarcher/internal/config"
-	"brarcher/internal/postgres"
-	httpapp "brarcher/internal/server/http"
-	"brarcher/internal/server/http/handlers"
-	"brarcher/internal/server/http/ws"
-	"brarcher/internal/session"
 	"context"
 	"fmt"
-	"github.com/redis/go-redis/v9"
-	"log"
 	"net/http"
+
+	"github.com/redis/go-redis/v9"
+
+	"brarcher/internal/api/http"
+	"brarcher/internal/api/http/handlers"
+	"brarcher/internal/api/http/ws"
+	"brarcher/internal/config"
+	"brarcher/internal/logger"
+	"brarcher/internal/postgres"
+	"brarcher/internal/session"
 )
 
 func main() {
@@ -21,7 +23,7 @@ func main() {
 
 	repo, err := postgres.Connect(ctx, conf.PostgresDSN)
 	if err != nil {
-		log.Fatalf("failed to connect to db: %s", err)
+		logger.Fatalf("failed to connect to db: %s", err)
 	}
 
 	redisClient := redis.NewClient(&redis.Options{Addr: conf.RedisAddr})
@@ -43,6 +45,6 @@ func main() {
 		MessageWSServer: messageWSServer,
 		RedirectServer:  redirectServer,
 	}, conf.HTTPPort); err != nil {
-		log.Fatalf("ListenAndServe: %s", err)
+		logger.Fatalf("listen: %s", err)
 	}
 }

@@ -1,10 +1,11 @@
 package handlers
 
 import (
-	"brarcher/internal/postgres"
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"brarcher/internal/postgres"
 )
 
 type UserServer struct {
@@ -34,7 +35,7 @@ func (us *UserServer) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("failed to register user"))
 	}
 
-	w.Write([]byte(fmt.Sprintf("%d", userID)))
+	_, _ = w.Write([]byte(fmt.Sprintf("%d", userID)))
 }
 
 type registerUserRequest struct {
@@ -57,18 +58,18 @@ func (us *UserServer) GetUser(w http.ResponseWriter, r *http.Request) {
 	user, err := us.repo.ROUsers().GetUser(r.Context(), b.UserID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("failed to get user"))
+		_, _ = w.Write([]byte("failed to get user"))
 		return
 	}
 
 	data, err := json.Marshal(user)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("failed to get user"))
+		_, _ = w.Write([]byte("failed to get user"))
 		return
 	}
 
-	w.Write(data)
+	_, _ = w.Write(data)
 }
 
 type getUserRequest struct {

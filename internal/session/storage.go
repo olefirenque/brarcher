@@ -8,23 +8,25 @@ import (
 	"time"
 
 	redis "github.com/redis/go-redis/v9"
+
+	"brarcher/internal/logger"
 )
 
 type Store struct {
 	redisClient *redis.Client
 
-	connMsgChan   map[int64]chan string
-	connMsgChanRW sync.RWMutex
+	connMsgChans   map[int64]chan string
+	connMsgChansRW sync.RWMutex
 
 	hostName string
 }
 
 func NewSessionStore(client *redis.Client, hostname string) *Store {
 	return &Store{
-		redisClient:   client,
-		connMsgChan:   map[int64]chan string{},
-		connMsgChanRW: sync.RWMutex{},
-		hostName:      hostname,
+		redisClient:    client,
+		connMsgChans:   map[int64]chan string{},
+		connMsgChansRW: sync.RWMutex{},
+		hostName:       hostname,
 	}
 }
 
@@ -33,29 +35,35 @@ func buildSessionKey(userID int64) string {
 }
 
 func (ss *Store) StoreSession(ctx context.Context, userID int64) error {
-	ss.connMsgChanRW.Lock()
-	ss.connMsgChan[userID] = make(chan string, 10)
-	ss.connMsgChanRW.Unlock()
+	ss.connMsgChansRW.Lock()
+	ss.connMsgChans[userID] = make(chan string, 10)
+	ss.connMsgChansRW.Unlock()
 
-	_, err := ss.redisClient.Set(ctx, buildSessionKey(userID), ss.hostName, 5*time.Minute).Result()
+	// Session key must be deleted with a graceful close of a connection, so set long enough ttl.
+	// TODO: Consider extending this ttl in the background.
+	_, err := ss.redisClient.Set(ctx, buildSessionKey(userID), ss.hostName, time.Hour).Result()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to announce ws session ownership for user %d: %w", userID, err)
 	}
 
 	return nil
 }
 
 func (ss *Store) DeleteSession(ctx context.Context, userID int64) error {
+	ss.connMsgChansRW.Lock()
+	delete(ss.connMsgChans, userID)
+	ss.connMsgChansRW.Unlock()
+
 	if _, err := ss.redisClient.Del(ctx, buildSessionKey(userID)).Result(); err != nil {
-		return fmt.Errorf("failed to delete session: %w", err)
+		return fmt.Errorf("failed to forget ws session ownership for user %d: %w", userID, err)
 	}
 	return nil
 }
 
 func (ss *Store) GetSessionChan(userID int64) (chan string, bool) {
-	ss.connMsgChanRW.RLock()
-	ch, ok := ss.connMsgChan[userID]
-	ss.connMsgChanRW.RUnlock()
+	ss.connMsgChansRW.RLock()
+	ch, ok := ss.connMsgChans[userID]
+	ss.connMsgChansRW.RUnlock()
 	return ch, ok
 }
 
@@ -63,7 +71,7 @@ func (ss *Store) ResolveBackend(ctx context.Context, userID int64) (string, bool
 	host, err := ss.redisClient.Get(ctx, buildSessionKey(userID)).Result()
 	if err != nil {
 		if !errors.Is(err, redis.Nil) {
-			fmt.Printf("unexpected error while resolving backend for user %d: %s", userID, err)
+			logger.Warnf("unexpected error while resolving backend for user %d: %s", userID, err)
 		}
 		return "", false
 	}

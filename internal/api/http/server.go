@@ -1,11 +1,12 @@
 package httpapp
 
 import (
-	"brarcher/internal/server/http/handlers"
-	"brarcher/internal/server/http/ws"
 	"fmt"
-	"log"
 	"net/http"
+
+	"brarcher/internal/api/http/handlers"
+	"brarcher/internal/api/http/ws"
+	"brarcher/internal/logger"
 )
 
 type Servers struct {
@@ -21,6 +22,6 @@ func Listen(mux *http.ServeMux, srv Servers, port int) error {
 	mux.HandleFunc("POST /internal/redirect", srv.RedirectMessage)
 
 	addr := fmt.Sprintf(":%d", port)
-	log.Printf("http server started on %s\n", addr)
+	logger.Infof("http server started on %s", addr)
 	return http.ListenAndServe(addr, mux)
 }

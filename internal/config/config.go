@@ -1,9 +1,10 @@
 package config
 
 import (
-	"fmt"
 	"os"
 	"strconv"
+
+	"brarcher/internal/logger"
 )
 
 type Config struct {
@@ -16,7 +17,7 @@ type Config struct {
 // New returns a new Config struct.
 func New() *Config {
 	hostname, _ := os.Hostname()
-	fmt.Printf("os.Hostname()=%s\n", hostname)
+	logger.Infof("os.hostname=%s", hostname)
 
 	return &Config{
 		// default values are not insecure and used only for local run
