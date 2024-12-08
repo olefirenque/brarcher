@@ -27,7 +27,7 @@ type Database struct {
 	pool *pgxpool.Pool
 }
 
-// Connect connects to a database cluster using the specified DSN and warden host for DB name resolution.
+// Connect connects to a database cluster using the specified DSN.
 func Connect(ctx context.Context, dsn string) (*Database, error) {
 	pool, err := pgxpool.Connect(ctx, dsn)
 	if err != nil {

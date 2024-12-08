@@ -7,7 +7,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"brarcher/internal/api/http"
+	httpapp "brarcher/internal/api/http"
 	"brarcher/internal/api/http/handlers"
 	"brarcher/internal/api/http/ws"
 	"brarcher/internal/config"
@@ -27,6 +27,9 @@ func main() {
 	}
 
 	redisClient := redis.NewClient(&redis.Options{Addr: conf.RedisAddr})
+	if err := redisClient.Ping(context.Background()).Err(); err != nil {
+		logger.Fatalf("failed to connect to redis: %s", err)
+	}
 
 	sessionStore := session.NewSessionStore(redisClient, fmt.Sprintf("%s:%d", conf.HostName, conf.HTTPPort))
 
