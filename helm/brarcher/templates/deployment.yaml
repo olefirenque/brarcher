@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "brarcher.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+  {{- include "brarcher.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "brarcher.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "brarcher.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: {{ include "brarcher.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: POSTGRES_DSN
+              value: "postgresql://{{ .Values.postgresql.auth.username }}:{{ .Values.postgresql.auth.password }}@{{ .Release.Name }}-{{ index .Values.postgresql.host }}:{{ .Values.postgresql.containerPorts.postgresql }}/{{.Values.postgresql.auth.database}}"
+            - name: HTTP_PORT
+              value: "8000"
+            - name: REDIS_ADDR
+              value: "{{ .Release.Name }}-{{ index .Values.redis.host }}:{{ .Values.redis.master.containerPorts.redis }}"
+          ports:
+            - name: {{ .Values.service.name }}
+              containerPort: {{ .Values.service.port }}
+              protocol: {{ .Values.service.protocol }}
+            - name: {{ .Values.grpcGateway.service.name }}
+              containerPort: {{ .Values.grpcGateway.service.port }}
+              protocol: {{ .Values.grpcGateway.service.protocol }}

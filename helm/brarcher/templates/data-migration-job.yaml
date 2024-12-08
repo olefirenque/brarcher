@@ -1,0 +1,45 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "brarcher.fullname" . }}-data-migration-job
+  namespace: {{ .Release.Namespace }}
+  labels:
+{{ include "brarcher.labels" . | indent 4 }}
+  annotations:
+    # This is what defines this resource as a hook. Without this line, the
+    # job is considered part of the release.
+    "helm.sh/hook": post-install, post-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "brarcher.name" . }}-migration
+        app.kubernetes.io/instance: {{ .Release.Name }}
+      annotations:
+        readiness.status.sidecar.istio.io/applicationPorts: ""
+    spec:
+      restartPolicy: Never
+      initContainers:
+        - name: init-data-migration
+          image: busybox
+          command: ['sh', '-c', "until nc -w 2 {{ .Release.Name }}-{{ index .Values.postgresql.host }} {{ .Values.postgresql.containerPorts.postgresql }}; do echo Waiting for {{ .Release.Name }}-{{ index .Values.postgresql.containerPorts.postgresql }}; sleep 2; done;"]
+      containers:
+        - name: {{ .Chart.Name }}
+          image: {{ include "brarcher.migration-image" . }}
+          imagePullPolicy: {{ .Values.migration.image.pullPolicy }}
+          env:
+            - name: DBHOST
+              value: "{{ .Release.Name }}-{{ index .Values.postgresql.host }}"
+            - name: DBNAME
+              value: {{ .Values.postgresql.auth.database | quote }}
+            - name: DBUSER
+              value: {{ .Values.postgresql.auth.username | quote }}
+            - name: DBPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "brarcher.fullname" . }}-secrets
+                  key: postgresqlPassword
+            - name: DBSSL
+              value: "disable"

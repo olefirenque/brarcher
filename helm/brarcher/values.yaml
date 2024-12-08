@@ -1,0 +1,73 @@
+# Default values for k8-golang-demo.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+image:
+  hostname: docker.io
+  repository: /golang-enthusiast/brarcher
+  tag: 0.1.0
+  pullPolicy: IfNotPresent
+
+migration:
+  image:
+    hostname: docker.io
+    repository: /golang-enthusiast/brarcher-migration
+    tag: 0.3.0
+    pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  protocol: TCP
+  port: 6565
+  httpPort: 8080
+  name: grpc
+
+ingress:
+  name: http
+  protocol: HTTP
+  port: 80
+  extension: svc.cluster.local
+
+serviceAccount:
+  create: true
+
+redis:
+  enabled: false
+  auth:
+    enabled: false
+  host: redis-master
+  replica:
+    replicaCount: 0
+  master:
+    containerPorts:
+      redis: 6379
+
+postgresql:
+  enabled: false
+  host: postgresql
+  auth:
+    username: admin
+    password: test
+    database: test
+  containerPorts:
+    postgresql: 5432
+  primary:
+    persistence:
+      enabled: false
+      storageClass: standard
+    pgHbaConfiguration: |
+      host     all             all             0.0.0.0/0               trust
+      host     all             all             ::/0                    trust
+      local    all             all                                     trust
+      host     all             all        127.0.0.1/32                 trust
+      host     all             all        ::1/128                      trust
+
+grpcGateway:
+  service:
+    protocol: TCP
+    port: 8080
+    name: http
+
+skaffold: false
