@@ -1,0 +1,50 @@
+apiVersion: skaffold/v2beta26
+kind: Config
+
+build:
+  artifacts:
+    - image: docker.io/golang-enthusiast/brarcher
+    - image: docker.io/golang-enthusiast/brarcher-data-migration
+      docker:
+        dockerfile: ./migration/Dockerfile
+      sync:
+        manual:
+          - src: './migration/**'
+            dest: '/migration/'
+  local:
+    push: false
+    concurrency: 1
+
+deploy:
+  helm:
+    flags:
+      upgrade: ["--timeout", "15m"]
+      install: ["--timeout", "15m"]
+    releases:
+      - name: test
+        chartPath: helm/brarcher
+        wait: true
+        artifactOverrides:
+          skaffoldImage: docker.io/golang-enthusiast/brarcher
+          migration.skaffoldImage: docker.io/golang-enthusiast/brarcher-data-migration
+        setValueTemplates:
+          skaffold: true
+          image.pullPolicy: Never
+          migration.image.pullPolicy: Never
+
+profiles:
+  - name: postgresql
+    patches:
+      - op: add
+        path: /deploy/helm/releases/0/setValueTemplates/postgresql.enabled
+        value: true
+      - op: add
+        path: /deploy/helm/releases/0/setValueTemplates/redis.enabled
+        value: true
+
+portForward:
+  - resourceType: deployment
+    resourceName: test-brarcher
+    namespace: default
+    port: 8080
+    localPort: 8080
